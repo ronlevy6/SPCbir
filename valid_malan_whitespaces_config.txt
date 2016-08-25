@@ -1,0 +1,21 @@
+#This is a test config file
+
+## valid file change all parameters including defaults
+
+## malan whitespaces
+
+	spImagesDirectory= ./images/
+spImagesPrefix =  img
+spImagesSuffix	  = .png
+spNumOfImages=10
+  spPCADimension = 16
+spPCAFilename =pca_new.yml
+spNumOfFeatures  = 8
+	spExtractionMode  =  true
+spNumOfSimilarImages =  2
+spKDTreeSplitMethod = RANDOM
+spKNN = 3
+	  	spMinimalGUI = false
+spLoggerLevel = 2
+spLoggerFilename = logger_file
+
