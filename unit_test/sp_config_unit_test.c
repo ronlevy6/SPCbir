@@ -147,6 +147,10 @@ bool spConfigCreateTest(){
 	ASSERT_TRUE(config == NULL);
 	spConfigDestroy(config);
 
+	config = spConfigCreate("invalid_whitespace_equal.txt", &msg);
+	ASSERT_TRUE(msg == SP_CONFIG_INVALID_STRING);
+	ASSERT_TRUE(config == NULL);
+	spConfigDestroy(config);
 
 	return true;
 
@@ -259,5 +263,5 @@ int main(){
 
 	return 0;
 }
-
 */
+

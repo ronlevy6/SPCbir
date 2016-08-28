@@ -153,9 +153,10 @@ double spPointL2SquaredDistance(SPPoint p, SPPoint q){
 	assert(dim_p == dim_q);
 
 	// input is valid
+
 	dist = 0.0;
 	//calculate the L2 distance
-	for (int i = 0; i < dim_p; i++){
+	for (int i = 0; i < dim_p && i < dim_q; i++){
 		tmp_calc = spPointGetAxisCoor(p,i) - spPointGetAxisCoor(q,i); //p[i] - q[i]
 		tmp_calc = tmp_calc * tmp_calc;
 		dist += tmp_calc;

@@ -556,7 +556,7 @@ bool splitTest(){
 	spPointDestroy(p0);
 	spPointDestroy(p1);
 	spPointDestroy(p2);
-	spPointDestroy(p2);
+	spPointDestroy(p3);
 	spPointDestroy(p4);
 	free(split_res);
 

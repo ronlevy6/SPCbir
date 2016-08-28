@@ -170,6 +170,7 @@ SP_LOGGER_MSG spLoggerPrintInfo(const char* msg){
 		if (logger_file != stdout){
 			// write message into a file
 			verify_write = fprintf(logger_file, "---INFO---\n- message: %s\n", msg);
+			fflush(logger_file);
 			// check writing is OK
 			if (verify_write < 0){
 				return SP_LOGGER_WRITE_FAIL;
@@ -217,6 +218,7 @@ SP_LOGGER_MSG print_data(const char* title,const char* msg, const char* file,
 		// write to file. Done in single command to prevent partial writing
 		verify_write = fprintf(logger_file,"%s\n- file: %s\n- function: %s\n- line: %d\n- message: %s\n",
 				title,file,function,line,msg);
+		fflush(logger_file);
 		// check fprintf worked properly
 		if (verify_write < 0){
 			return SP_LOGGER_WRITE_FAIL;

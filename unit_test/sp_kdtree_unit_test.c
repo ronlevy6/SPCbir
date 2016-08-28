@@ -182,11 +182,10 @@ bool create_leaf_test(){
 	ASSERT_TRUE(db_equal(spPointGetAxisCoor(node->data,1),3.1, EPS));
 	ASSERT_TRUE(db_equal(spPointGetAxisCoor(node->data,2),1.2, EPS));
 	ASSERT_TRUE(spPointGetIndex(node->data) == 0);
-	/*
-	 dim and val are set to inf - how can we check it?
-	ASSERT_TRUE(node->dim > 10000);
-	ASSERT_TRUE(node->val > 10000);
-	*/
+	ASSERT_TRUE(node->dim == -1);
+	ASSERT_TRUE(node->val == INFINITY);
+	ASSERT_TRUE(node->val > 1000000);
+
 	ASSERT_TRUE(node->left == NULL);
 	ASSERT_TRUE(node->right == NULL);
 
@@ -600,7 +599,7 @@ bool knn_test(){
 	spPointDestroy(p1);
 	spPointDestroy(p2);
 	spPointDestroy(p0);
-	spBPQueueDequeue(queue);
+	spBPQueueDestroy(queue);
 
 
 	return true;
@@ -684,6 +683,7 @@ bool show_results_test(){
 }
 */
 
+/*
 int main(){
 
 	RUN_TEST(get_split_dim_test);
@@ -700,5 +700,4 @@ int main(){
 	return 0;
 
 }
-
-
+*/

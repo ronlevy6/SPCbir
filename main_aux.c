@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <math.h>
 
 #include "main_aux.h"
 
@@ -29,7 +30,7 @@
 #define SPLIT_ERR "Error splitting KDArray"
 #define CANNOT_CREATE_QUEUE "Cannot create BPQueue"
 
-#define INF 1.0/0.0
+#define INVALID_DIM -1
 
 #define FREE_AND_NULL(ptr) do { \
 								if ((ptr)!= NULL) { \
@@ -43,8 +44,6 @@
 PKDArray init(SPPoint* points_arr, int size, SP_AUX_MSG* msg){
 
 	PKDArray result;
-
-	spLoggerPrintInfo("Entered init of KD-Array\n");
 
 	if (points_arr == NULL || size <= 0){
 		spLoggerPrintError(INVALID_ARG_ERROR,__FILE__,__func__,__LINE__);
@@ -83,8 +82,6 @@ PKDArray copyArray(PKDArray arr, int start, int end, SP_AUX_MSG* msg){
 
 	PKDArray copy = NULL;
 	int size = end - start, j = 0;
-
-	spLoggerPrintInfo("Entered copyArray\n");
 
 	if (arr == NULL){
 		spLoggerPrintError(INVALID_ARG_ERROR,__FILE__,__func__,__LINE__);
@@ -304,8 +301,6 @@ int* createNewIdx(PMatrix pmat, int* split_map, int indicator, SP_AUX_MSG* msg){
 	int* result = NULL;
 	int idx_cnt = 0;
 
-	spLoggerPrintInfo("Entered createNewIdx\n");
-
 	result = (int*)malloc(sizeof(int) * pmat->cols);
 	if (result == NULL){
 		spLoggerPrintError(ALLOC_ERROR_MSG,__FILE__,__func__,__LINE__);
@@ -330,8 +325,6 @@ int* createNewIdx(PMatrix pmat, int* split_map, int indicator, SP_AUX_MSG* msg){
 
 int* createSplitMap(PMatrix pmat, int coor, int mid, SP_AUX_MSG* msg){
 	int* result = NULL, *coor_arr;
-
-	spLoggerPrintInfo("Entered createSplitMap\n");
 
 	result = (int *)malloc(sizeof(int) * pmat->cols);
 	if (result == NULL){
@@ -394,8 +387,6 @@ PMatrix* split(PMatrix pmatrix, int coor, SP_AUX_MSG* msg){
 	PKDArray sorted_coor_arr;
 	int mid = -1, n, l_idx_cnt=0, r_idx_cnt=0, prev_idx, curr_idx;
 	int *l_map, *r_map, *split_map, *idx_sorted_by_coor;
-
-	spLoggerPrintInfo("Entered Split\n");
 
 	if (pmatrix == NULL){
 		spLoggerPrintError(INVALID_ARG_ERROR,__FILE__,__func__,__LINE__);
@@ -1046,8 +1037,8 @@ PKDTreeNode create_leaf(SPPoint point){
 		return NULL;
 	}
 
-	node->dim = INF;
-	node->val = INF;
+	node->dim = INVALID_DIM;
+	node->val = INFINITY;
 	node->data = spPointCopy(point);
 	node->left = NULL;
 	node->right = NULL;
@@ -1073,6 +1064,7 @@ PKDTreeNode create_tree(PMatrix pmatrix, SP_KDTREE_SPLIT_METHOD split_method, in
 	if (kd_arr_size == 1){
 		point = pmatrix->kd_array->data[0].point;	// only one point left
 		node = create_leaf(point);
+		DestroyMatrix(pmatrix, pmatrix->rows);
 		if (node == NULL){
 			spLoggerPrintError(ALLOC_ERROR_MSG,__FILE__,__func__,__LINE__);
 			return NULL;
@@ -1113,7 +1105,9 @@ PKDTreeNode create_tree(PMatrix pmatrix, SP_KDTREE_SPLIT_METHOD split_method, in
 
 	left = split_result[0];
 	right = split_result[1];
-	// %T*$&$RYRETERTC**%^*$%^*$%*^
+
+	// free unneeded allocations
+	free(split_result);
 	DestroyMatrix(pmatrix, pmatrix->rows);
 
 	node->left = create_tree(left, split_method, split_dim);
@@ -1147,7 +1141,6 @@ void knn(PKDTreeNode node,SPBPQueue queue, SPPoint point){
 	double dist, dist_from_val;
 	SPListElement elem;
 	bool goes_left = false;
-	SP_BPQUEUE_MSG msg;
 
 
 	if (node == NULL){
@@ -1162,11 +1155,8 @@ void knn(PKDTreeNode node,SPBPQueue queue, SPPoint point){
 		node_idx = spPointGetIndex(node_point);
 		elem = spListElementCreate(node_idx, dist);
 		// if the distance is too big and the queue is full then the element will not be enqueued
-		msg = spBPQueueEnqueue(queue,elem);
-		if (msg != SP_BPQUEUE_SUCCESS){
-			// elem not enqueued - destroy element
-			spListElementDestroy(elem);
-		}
+		spBPQueueEnqueue(queue,elem);
+		spListElementDestroy(elem); // destroy elem since it is copied to queue
 		return;
 	}
 	/* Recursively search the half of the tree that contains the test point. */

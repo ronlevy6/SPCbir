@@ -4,8 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
-
+#define DEFAULT_PCA_FILENAME "pca.yml"
+#define DEFAULT_LOGGER_FILENAME "stdout"
 
 /*
  * An enum represents the cut method when the kd-tree is build.
@@ -69,7 +71,7 @@ SPConfig spConfigCreate(const char* filename, SP_CONFIG_MSG* msg){
 	char line[MAX_LINE_LEN];
 	char * key, * value,*pch;
 	SP_CONFIG_MSG update_msg;
-	bool has_equal = false;
+	bool has_equal = false, has_space_equal=false;
 
 	//printf("entered spConfigCreate\n");
 
@@ -114,7 +116,7 @@ SPConfig spConfigCreate(const char* filename, SP_CONFIG_MSG* msg){
 
 	}
 	// set default value of spPCAFilename to pca.yml
-	config->spPCAFilename = "pca.yml";
+	sprintf(config->spPCAFilename, DEFAULT_PCA_FILENAME);
 	config->spLoggerFilename = (char *)malloc(sizeof(char)*MAX_LINE_LEN);
 
 	if (config->spLoggerFilename == NULL){
@@ -126,13 +128,15 @@ SPConfig spConfigCreate(const char* filename, SP_CONFIG_MSG* msg){
 	}
 
 	//set default value of spLoggerFilename to stdout
-	config->spLoggerFilename = "stdout";
+	sprintf(config->spLoggerFilename, DEFAULT_LOGGER_FILENAME);
 
 	// assign NULL to all other fields:
 	config->spImagesDirectory = NULL;
 	config->spImagesPrefix = NULL;
 	config->spImagesSuffix = NULL;
 	config->spNumOfImages = -1;
+
+	//printf("before load file\n");
 
 	//######################################################################################
 	//######################################################################################
@@ -141,10 +145,11 @@ SPConfig spConfigCreate(const char* filename, SP_CONFIG_MSG* msg){
 	// load data from fp
 
 	while (fgets(line, MAX_LINE_LEN, fp) != NULL){
-		//printf("line = %s len = %d\n", line, strlen(line));
-		fflush(NULL);
+		//printf("line = %s len = %d\n", line, (int)strlen(line));
+		//fflush(NULL);
 		if (!IsEmptyLine(line)){
 
+			has_space_equal = is_whitespace_and_equal(line);
 
 			if (strchr(line,'=') == NULL){// line has no '='
 				has_equal = false;
@@ -154,7 +159,7 @@ SPConfig spConfigCreate(const char* filename, SP_CONFIG_MSG* msg){
 			}
 			pch = strtok(line, "= \r\n\t\v\f"); // split line using whitespace and "=" as delimiters
 			if (*pch != '#'){ // Line is not comment
-				if (!has_equal){// invalid line - no '=' in a not comment line
+				if (!has_equal || has_space_equal){// invalid line - no '=' in a not comment line or invalid format
 					printf("File: %s\nLine: %d\nMessage: Invalid configuration line\n",filename,line_cnt);
 					*msg = SP_CONFIG_INVALID_STRING;
 					spConfigDestroy(config); // free all previous allocation
@@ -199,7 +204,7 @@ SPConfig spConfigCreate(const char* filename, SP_CONFIG_MSG* msg){
 					printf("spMinimalGUI %d\n", config->spMinimalGUI);
 					printf("spLoggerLevel %d\n", config->spLoggerLevel);
 					printf("spLoggerFilename %s\n\n\n\n", config->spLoggerFilename);
-					*/
+					 */
 					if (update_msg == SP_CONFIG_INVALID_ARGUMENT){
 						printf("File: %s\nLine: %d\nMessage: Invalid configuration line\n",filename,line_cnt);
 						*msg = SP_CONFIG_INVALID_STRING;
@@ -281,6 +286,7 @@ SPConfig spConfigCreate(const char* filename, SP_CONFIG_MSG* msg){
 	*/
 
 	*msg = SP_CONFIG_SUCCESS;
+	fclose(fp);
 	return config;
 }
 
@@ -389,13 +395,17 @@ SP_CONFIG_MSG update_config_param(SPConfig config, char* key, char* value, int i
 	else if (strcmp(key,"spPCAFilename") == 0){
 		if (valid_whitespaces){ // line is valid
 			// no need in memory allocation - was already allocated when assigned default value
+			//printf("in update - spPCAFilename param before free\n");
 			free(config->spPCAFilename);
+			//printf("in update - spPCAFilename param after free\n");
 			config->spPCAFilename = (char*)malloc(strlen(value) + 1);
+			//printf("in update - spPCAFilename param after malloc\n");
 			if (config->spPCAFilename == NULL){
 				return SP_CONFIG_ALLOC_FAIL;
 			}
 			strncpy(config->spPCAFilename,value,strlen(value));
 			*(config->spPCAFilename + strlen(value)) = '\0';
+			//printf("in update - spPCAFilename param after assign\n");
 			//printf("pca filename in func = %s\n", config->spPCAFilename);
 			return SP_CONFIG_SUCCESS;
 		}
@@ -736,13 +746,29 @@ void spConfigDestroy(SPConfig config){
 
 bool IsEmptyLine(char line[MAX_LINE_LEN]){
 
-	for(int i = 0; i< strlen(line); i++){
+	int len = (int)strlen(line);
+	for(int i = 0; i <len; i++){
 		if(line[i] != ' ' && line[i] != '\r' && line[i] != '\n' && line[i] != '\t' && line[i] != '\f'
 				&& line[i] != '\v'){
 			return false;
 		}
 	}
 	return true;
+}
+
+bool is_whitespace_and_equal(char line[MAX_LINE_LEN]){
+
+	int i = 0;
+	int len = (int)strlen(line);
+	while (i < len && isspace(line[i])){
+		i++;
+	}
+	if(i != len){
+		if (line[i] == '='){ // zero or more whitespaces followed by '='
+			return true;
+		}
+	}
+	return false;
 }
 
 int SPConfigGetNumOfSimilarImages(SPConfig config, SP_CONFIG_MSG* msg){
@@ -755,22 +781,19 @@ int SPConfigGetNumOfSimilarImages(SPConfig config, SP_CONFIG_MSG* msg){
 	return config->spNumOfSimilarImages;
 }
 
-char* SPConfigGetLoggerFilename(SPConfig config, SP_CONFIG_MSG* msg){
+SP_CONFIG_MSG spConfigGetLoggerFilename(char* logger_filename, const SPConfig config){
 
-	char *result;
+	if (logger_filename == NULL ||config == NULL){
+		return SP_CONFIG_INVALID_ARGUMENT;
+	}
+	// concatenate fields into one path and store it in imagePath (will be malloced before call)
+	memset(logger_filename, 0x00, MAX_LINE_LEN); // clean memory on stack
+	strncpy(logger_filename, config->spLoggerFilename, strlen(config->spLoggerFilename));
+	logger_filename[strlen(logger_filename)] = '\0';
 
-	if (config == NULL){
-		*msg = SP_CONFIG_INVALID_ARGUMENT;
-		return NULL;
-	}
-	result = (char *)malloc(sizeof(char) * strlen(config->spLoggerFilename));
-	if (result == NULL){
-		*msg = SP_CONFIG_ALLOC_FAIL;
-		return NULL;
-	}
-	*msg = SP_CONFIG_SUCCESS;
-	return result;
+	return SP_CONFIG_SUCCESS;
 }
+
 
 SP_LOGGER_LEVEL SPConfigGetLoggerLevel(SPConfig config, SP_CONFIG_MSG* msg){
 

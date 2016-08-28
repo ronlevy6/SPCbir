@@ -224,6 +224,21 @@ int check_config_values(SPConfig config);
 bool IsEmptyLine(char line[MAX_LINE_LEN]);
 
 /*
+ * This method is used in detecting a line which starts in zero or more whitespaces followed by
+ * '=' character.
+ * this case will can be recognized by strtok function as valid config line.
+ *
+ * @param
+ * line - a line in the configuration file
+ *
+ * @return
+ * true - if the line is as described above
+ * false- otherwise
+ */
+bool is_whitespace_and_equal(char line[MAX_LINE_LEN]);
+
+
+/*
  * this method receives a configuration file, an image index and a pointer that will store the
  * resulting path string
  *
@@ -237,6 +252,7 @@ bool IsEmptyLine(char line[MAX_LINE_LEN]);
  * - SP_CONFIG_SUCCESS - in case of success
  *
  */
+
 SP_CONFIG_MSG spConfigGetFeatsPath(char* featsPath, const SPConfig config, int index);
 
 /*
@@ -253,16 +269,19 @@ SP_CONFIG_MSG spConfigGetFeatsPath(char* featsPath, const SPConfig config, int i
 int SPConfigGetNumOfSimilarImages(SPConfig config, SP_CONFIG_MSG* msg);
 
 /*
- * returns the logger filename according to the configurations file
+ * The function stores in loger_filename the full path of the logger file.
+
+ *
+ * The functions stores a path to a file to the address given by logger_filename.
+ * Thus this address must contain enough space to store the resulting string.
+ *
+ * @param logger_filename - an address to store the result in, it must contain enough space.
  * @param config - the configuration structure
- * @param msg - pointer in which the msg returned by the function is stored
- *
  * @return
- *
- * - SP_CONFIG_SUCCESS - in case of success
- * - SP_CONFIG_ALLOC_FAIL - in case of memory allocation failure
+ *  - SP_CONFIG_INVALID_ARGUMENT - if logger_filename == NULL or config == NULL
+ *  - SP_CONFIG_SUCCESS - in case of success
  */
-char* SPConfigGetLoggerFilename(SPConfig config, SP_CONFIG_MSG* msg);
+SP_CONFIG_MSG spConfigGetLoggerFilename(char* logger_filename, const SPConfig config);
 
 /*
  *returns the logger level according to the configurations file

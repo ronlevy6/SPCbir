@@ -32,7 +32,7 @@ extern "C" {
 #define INVALID_CMD_LINE "Invalid command line : use -c <config_filename>"
 #define VALID_CMD_CANT_OPEN "The configuration file <filename> couldn’t be open"
 #define DEFAULT_CMD_CANT_OPEN "The default configuration file spcbir.config couldn’t be open"
-#define EXIT_MSG "Exiting…\n"
+#define EXIT_MSG "Exiting...\n"
 #define GET_QUERY "Please enter an image path:"
 #define CAN_NOT_CREATE_POINT_ARR "MAIN: Can not create array from file"
 #define CAN_NOT_CREATE_KD_ARR "MAIN: Can not create KDArray"
@@ -73,10 +73,9 @@ void writeFeaturesToFile(SPConfig config);
 void show_results(int* idx_arr,SPConfig config, char* query_img_path);
 
 
-/*
 int main(int argc, char* argv[]){
 
-	char *config_filename, *logger_filename, *query_filename;
+	char *config_filename, *logger_filename, *query_filename, *pos;
 	SP_CONFIG_MSG config_msg;
 	bool is_default=false, extract_mode, need_to_exit=false;
 	SPConfig config;
@@ -89,9 +88,11 @@ int main(int argc, char* argv[]){
 	PKDTreeNode root;
 	SP_KDTREE_SPLIT_METHOD method;
 	int *nearest_img_idx = NULL;
-	int total_features = 0, dim, query_total_features = 0, num_of_img, num_of_similar_img, spknn;
+	int total_features = 0, dim, query_total_features = 0, num_of_img, num_of_similar_img, spknn, query_idx;
 
 	// ##### check command line arguments ###### //
+
+	printf("MAIN: args check\n");
 
 	// argv[0] = program name, argv[1] = flag argv[2] = config file
 	if (argc == 1){ // default config file
@@ -101,7 +102,7 @@ int main(int argc, char* argv[]){
 			printf("%s\n%s",ALLOC_ERROR_MSG, EXIT_MSG);
 			exit(EXIT_FAILURE);
 		}
-		config_filename = (char *)CONFIG_DEFAULT;
+		sprintf(config_filename, (char *)CONFIG_DEFAULT);
 	}
 	else if (argc == 3){// valid number of arguments
 		is_default = false;
@@ -109,18 +110,19 @@ int main(int argc, char* argv[]){
 			printf("%s\n", INVALID_CMD_LINE);
 			exit(EXIT_FAILURE); // terminate program
 		}
+
 		config_filename = (char *) malloc(sizeof(char) * MAX_LINE_LEN);
 		if (config_filename == NULL){
 			printf("%s\n%s",ALLOC_ERROR_MSG, EXIT_MSG);
 			exit(EXIT_FAILURE);
 		}
-		config_filename = argv[2];
+		strncpy(config_filename, argv[2], strlen(argv[2]));
 	}
-	else{//TODO check if conditions of invalidity are OK
-		// invalid command line argument
+	else{	// invalid command line argument
 		printf("%s\n", INVALID_CMD_LINE);
 		exit(EXIT_FAILURE);
 	}
+
 
 	//###### create config ######//
 	config = spConfigCreate(config_filename, &config_msg);
@@ -131,7 +133,7 @@ int main(int argc, char* argv[]){
 			exit(EXIT_FAILURE);
 		}
 		else{
-			printf("%s\n", VALID_CMD_CANT_OPEN);
+			printf("The configuration file %s couldn’t be open\n", config_filename);
 			FREE_AND_NULL_MAIN(config_filename);
 			exit(EXIT_FAILURE);
 		}
@@ -145,6 +147,7 @@ int main(int argc, char* argv[]){
 	// config is valid - can free config filename
 	FREE_AND_NULL_MAIN(config_filename);
 
+	printf("MAIN: config is created\n");
 
 
 	// ########### extract needed fields from config #########//
@@ -183,13 +186,19 @@ int main(int argc, char* argv[]){
 		need_to_exit = true;
 	}
 
-	logger_filename = SPConfigGetLoggerFilename(config, &config_msg);
+	logger_filename = (char *) malloc(sizeof(char) * MAX_LINE_LEN);
+	if (logger_filename == NULL){
+		printf("%s\n%s",ALLOC_ERROR_MSG, EXIT_MSG);
+		spConfigDestroy(config);
+		exit(EXIT_FAILURE);
+	}
+	config_msg = spConfigGetLoggerFilename(logger_filename, config);
 	if (config_msg != SP_CONFIG_SUCCESS){
 		need_to_exit = true;
 	}
 
-
 	if (need_to_exit == true){
+		FREE_AND_NULL_MAIN(logger_filename);
 		spConfigDestroy(config);
 		printf("An Error occurred - Exiting...\n");
 		exit(EXIT_FAILURE);
@@ -197,6 +206,11 @@ int main(int argc, char* argv[]){
 
 
 	// #### create logger #####//
+	if (strncmp(logger_filename, (const char *)"stdout", 6) == 0){
+		// stdout mode - need to set loger to NULL and print all logger messages to screen
+		FREE_AND_NULL_MAIN(logger_filename);
+	}
+
 	logger_msg = spLoggerCreate(logger_filename,logger_level);
 	if (logger_msg != SP_LOGGER_SUCCESS){
 		printf("An Error occurred while creating logger - Exiting...\n");
@@ -207,13 +221,19 @@ int main(int argc, char* argv[]){
 	// logger is valid - can free logger filename
 	FREE_AND_NULL_MAIN(logger_filename);
 
+	printf("MAIN: logger is created - to pre process\n");
+
 
 	//####### pre-process ####### //
+
+	sp::ImageProc improc = sp::ImageProc((const SPConfig) config);
 
 	// write- extract_mode == true, read - extract_mode == false
 	if (extract_mode == true){// need to write to file
 		writeFeaturesToFile(config);	// consider adding a message to know it works fine
 	}
+
+	printf("MAIN: before read from file\n");
 
 	// read mode is always applied
 	feats_as_points = readFeaturesFromFile(config, &total_features);
@@ -246,6 +266,8 @@ int main(int argc, char* argv[]){
 		exit(EXIT_FAILURE);
 	}
 
+	printf("MAIN: before tree\n");
+
 	// create the tree
 	root = create_tree(pmatrix, method, -1);	// prev dim is always -1 because INCREMENTAL starts with 0
 	if (root == NULL){ // problem in memory allocation or in split
@@ -254,7 +276,9 @@ int main(int argc, char* argv[]){
 		spLoggerDestroy();
 		destroyPointsArray(feats_as_points, total_features);
 		DestroyKDArray(kd_array);
-		DestroyMatrix(pmatrix, dim);
+		if(pmatrix != NULL){	// matrix was not destroyed in create tree
+			DestroyMatrix(pmatrix, dim);
+		}
 		exit(EXIT_FAILURE);
 	}
 
@@ -264,7 +288,7 @@ int main(int argc, char* argv[]){
 
 	//############# QUERY ##############//
 	spLoggerPrintInfo("MAIN: Entered query section\n");
-
+	printf("MAIN: query section\n");
 
 	query_filename = (char *)malloc(sizeof(char) *MAX_LINE_LEN);
 	if (query_filename == NULL){
@@ -272,27 +296,30 @@ int main(int argc, char* argv[]){
 		spConfigDestroy(config);
 		spLoggerDestroy();
 		destroyPointsArray(feats_as_points, total_features);
-		DestroyMatrix(pmatrix, dim);
+		//DestroyMatrix(pmatrix, dim);
 		destroyKDTree(root);
 		exit(EXIT_FAILURE);
 	}
 
 	while (true){
-
+		printf("MAIN: in the beginning while loop of query section\n");
 		memset(query_filename, 0x00, strlen(query_filename));
 		printf("%s\n", GET_QUERY);
 		fflush(NULL);
 		fgets(query_filename, MAX_LINE_LEN, stdin);
-		query_filename[MAX_LINE_LEN - 1] = '\0'; // replace \n suffix from fgets
+		if ((pos=strchr(query_filename, '\n')) != NULL){
+		    *pos = '\0';
+		}
+		//query_filename[MAX_LINE_LEN - 1] = '\0'; // replace \n suffix from fgets
 
-		// if the user enters the string "<>" exit program
-		if (strcmp(query_filename, "<>") == 0){
+		// if the user entered the string "<>" exit program
+		if (strncmp((const char *)query_filename, (const char *)"<>",2) == 0){
 			spLoggerPrintInfo(EXIT_MSG);
 			FREE_AND_NULL_MAIN(query_filename);
 			spConfigDestroy(config);
 			spLoggerDestroy();
 			destroyPointsArray(feats_as_points, total_features);
-			DestroyMatrix(pmatrix, dim);
+			//DestroyMatrix(pmatrix, dim);
 			destroyKDTree(root);
 			printf("%s\n", EXIT_MSG);
 			exit(EXIT_SUCCESS);
@@ -303,9 +330,12 @@ int main(int argc, char* argv[]){
 
 
 		//######### get features for query #########//
-		sp::ImageProc improc = sp::ImageProc((const SPConfig) config);
-		// set index as -1 to prevent overlaps in the total features points
-		query_features = improc.getImageFeatures((const char*)query_filename, -1, &query_total_features);
+		// moved UP!
+		//sp::ImageProc improc = sp::ImageProc((const SPConfig) config);
+		//sp::ImageProc* improc = new sp::ImageProc((const SPConfig) config);
+		// set index as num_of_img + 10 to prevent overlaps in the total features points index
+		query_idx = num_of_img + 10;
+		query_features = improc.getImageFeatures((const char*)query_filename, query_idx, &query_total_features);
 
 		nearest_img_idx = get_nearest_images(root, query_features, query_total_features,
 				num_of_img, spknn, num_of_similar_img);
@@ -317,7 +347,7 @@ int main(int argc, char* argv[]){
 			spLoggerDestroy();
 			destroyPointsArray(feats_as_points, total_features);
 			destroyPointsArray(query_features, query_total_features);
-			DestroyMatrix(pmatrix, dim);
+			//DestroyMatrix(pmatrix, dim);
 			destroyKDTree(root);
 			exit(EXIT_FAILURE);
 		}
@@ -325,16 +355,17 @@ int main(int argc, char* argv[]){
 		show_results(nearest_img_idx, config, query_filename);
 		spLoggerPrintInfo("MAIN: finished showing result for query\n");
 
+		printf("MAIN: in the end of while loop of query section\n");
+
 
 		// free all allocations
 		destroyPointsArray(query_features, query_total_features);
 		FREE_AND_NULL_MAIN(nearest_img_idx);
-		// need to free image proc
 	}
 
 	return 0;
 }
-*/
+
 
 void writeFeaturesToFile(SPConfig config){
 	int num_of_images, num_of_features, pca_dim;
