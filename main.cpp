@@ -30,8 +30,8 @@ extern "C" {
 #define CAN_NOT_GET_MINIMAL_GUI "Can not assign Minimal Gui"
 #define CAN_NOT_GET_IMAGE_PATH "Can not assign Image Path"
 #define INVALID_CMD_LINE "Invalid command line : use -c <config_filename>"
-#define VALID_CMD_CANT_OPEN "The configuration file <filename> couldn’t be open"
-#define DEFAULT_CMD_CANT_OPEN "The default configuration file spcbir.config couldn’t be open"
+#define VALID_CMD_CANT_OPEN "The configuration file <filename> couldn't be open"
+#define DEFAULT_CMD_CANT_OPEN "The default configuration file spcbir.config couldn't be open"
 #define EXIT_MSG "Exiting...\n"
 #define GET_QUERY "Please enter an image path:"
 #define CAN_NOT_CREATE_POINT_ARR "MAIN: Can not create array from file"
@@ -131,7 +131,7 @@ int main(int argc, char* argv[]){
 			exit(EXIT_FAILURE);
 		}
 		else{
-			printf("The configuration file %s couldn’t be open\n", config_filename);
+			printf("The configuration file %s couldn't be open\n", config_filename);
 			FREE_AND_NULL_MAIN(config_filename);
 			exit(EXIT_FAILURE);
 		}
