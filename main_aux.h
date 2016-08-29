@@ -54,16 +54,6 @@ typedef struct kd_tree_node{
 	SPPoint data;
 }KDTreeNode, *PKDTreeNode;
 
-
-/*
- * TODO add doc according changes
- * for us: envelop - will be used in main after receiving a node and make it the tree's root
- */
-
-typedef struct kd_tree{
-	PKDTreeNode root; // pointer? or just a node?
-}KDTree, *PKDTree;
-
 /*
  * struct to be used to count amount of appearances of each image as one of the spknn nearest images.
  */
@@ -91,22 +81,6 @@ typedef enum sp_aux_msg_t {
 	SP_AUX_SUCCESS
 } SP_AUX_MSG;
 
-
-/*
- * This method gets as input the configuration file, and creates new features files for each image.
- * For image ./images/img5.png the new file will be ./images/img5/feats
- * The format of the features file will be as followed:
- * first line includes number of features of current image, number of dimensions for features and image index
- * the rest of the file will contain a type double matrix - the SIFTs values.
- *
- * for example, image 4 has 2 features, each with 3 dimensions:
- * 2 3 4
- * 4 7 8
- * 5 3 9
- *
- * Moved to main!!!
- */
-//void writeFeaturesToFile(SPConfig config);
 
 /*
  * This method gets a configuration file, checks that the features files exist.

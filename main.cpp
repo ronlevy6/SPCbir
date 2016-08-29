@@ -92,8 +92,6 @@ int main(int argc, char* argv[]){
 
 	// ##### check command line arguments ###### //
 
-	printf("MAIN: args check\n");
-
 	// argv[0] = program name, argv[1] = flag argv[2] = config file
 	if (argc == 1){ // default config file
 		is_default = true;
@@ -146,8 +144,6 @@ int main(int argc, char* argv[]){
 	}
 	// config is valid - can free config filename
 	FREE_AND_NULL_MAIN(config_filename);
-
-	printf("MAIN: config is created\n");
 
 
 	// ########### extract needed fields from config #########//
@@ -221,8 +217,6 @@ int main(int argc, char* argv[]){
 	// logger is valid - can free logger filename
 	FREE_AND_NULL_MAIN(logger_filename);
 
-	printf("MAIN: logger is created - to pre process\n");
-
 
 	//####### pre-process ####### //
 
@@ -232,8 +226,6 @@ int main(int argc, char* argv[]){
 	if (extract_mode == true){// need to write to file
 		writeFeaturesToFile(config);	// consider adding a message to know it works fine
 	}
-
-	printf("MAIN: before read from file\n");
 
 	// read mode is always applied
 	feats_as_points = readFeaturesFromFile(config, &total_features);
@@ -266,8 +258,6 @@ int main(int argc, char* argv[]){
 		exit(EXIT_FAILURE);
 	}
 
-	printf("MAIN: before tree\n");
-
 	// create the tree
 	root = create_tree(pmatrix, method, -1);	// prev dim is always -1 because INCREMENTAL starts with 0
 	if (root == NULL){ // problem in memory allocation or in split
@@ -287,8 +277,7 @@ int main(int argc, char* argv[]){
 
 
 	//############# QUERY ##############//
-	spLoggerPrintInfo("MAIN: Entered query section\n");
-	printf("MAIN: query section\n");
+	spLoggerPrintInfo("MAIN: Entered query section");
 
 	query_filename = (char *)malloc(sizeof(char) *MAX_LINE_LEN);
 	if (query_filename == NULL){
@@ -302,7 +291,6 @@ int main(int argc, char* argv[]){
 	}
 
 	while (true){
-		printf("MAIN: in the beginning while loop of query section\n");
 		memset(query_filename, 0x00, strlen(query_filename));
 		printf("%s\n", GET_QUERY);
 		fflush(NULL);
@@ -326,13 +314,11 @@ int main(int argc, char* argv[]){
 		}
 
 		// continue program flow
-		spLoggerPrintInfo("MAIN: Query path is valid\n");
+		spLoggerPrintInfo("MAIN: Query path is valid");
 
 
 		//######### get features for query #########//
-		// moved UP!
-		//sp::ImageProc improc = sp::ImageProc((const SPConfig) config);
-		//sp::ImageProc* improc = new sp::ImageProc((const SPConfig) config);
+
 		// set index as num_of_img + 10 to prevent overlaps in the total features points index
 		query_idx = num_of_img + 10;
 		query_features = improc.getImageFeatures((const char*)query_filename, query_idx, &query_total_features);
@@ -347,16 +333,12 @@ int main(int argc, char* argv[]){
 			spLoggerDestroy();
 			destroyPointsArray(feats_as_points, total_features);
 			destroyPointsArray(query_features, query_total_features);
-			//DestroyMatrix(pmatrix, dim);
 			destroyKDTree(root);
 			exit(EXIT_FAILURE);
 		}
 
 		show_results(nearest_img_idx, config, query_filename);
-		spLoggerPrintInfo("MAIN: finished showing result for query\n");
-
-		printf("MAIN: in the end of while loop of query section\n");
-
+		spLoggerPrintInfo("MAIN: finished showing result for query");
 
 		// free all allocations
 		destroyPointsArray(query_features, query_total_features);
@@ -398,7 +380,8 @@ void writeFeaturesToFile(SPConfig config){
 		spLoggerPrintError(PCA_DIM_ERROR_MSG,__FILE__,__func__,__LINE__);
 		return;
 	}
-
+	// create imgproc process
+	sp::ImageProc improc = sp::ImageProc((const SPConfig) config);
 
 	for (int i = 0; i < num_of_images; i++){
 
@@ -433,7 +416,7 @@ void writeFeaturesToFile(SPConfig config){
 			return;
 		}
 		// feat_path is OK to write to
-		sp::ImageProc improc = sp::ImageProc((const SPConfig) config);
+
 		res_point = improc.getImageFeatures((const char*)image_path, i, &num_of_features);
 		// write the first line as presented in the file's format
 		fprintf(fp, "%d %d %d\n", num_of_features, pca_dim,i); // check if \n is necessary
@@ -482,7 +465,7 @@ void show_results(int* idx_arr, SPConfig config, char* query_img_path){
 		return;
 	}
 
-	sp::ImageProc improc = sp::ImageProc((const SPConfig) config); // how to free this ###############
+	sp::ImageProc improc = sp::ImageProc((const SPConfig) config);
 
 	if (minimal_gui == false){
 		printf("Best candidates for - %s - are:\n",query_img_path);

@@ -10,19 +10,6 @@
 #define DEFAULT_LOGGER_FILENAME "stdout"
 
 /*
- * An enum represents the cut method when the kd-tree is build.
- * One of the following values {RANDOM, MAX_SPREAD, INCREMENTAL }. Default = MAX_SPREAD.
- */
-/*
-typedef enum sp_kdtree_split_method_t{
-	RANDOM,
-	MAX_SPREAD,
-	INCREMENTAL
-} SP_KDTREE_SPLIT_METHOD;
-
-*/
-
-/*
  * Struct sp_config_t keeps all data from config file.
  * Each field corresponds to the system variable written in the instruction file
  * Fields with default value will be initialized at struct creation
@@ -65,6 +52,7 @@ struct sp_config_t{
 	char * spLoggerFilename;
 };
 
+
 SPConfig spConfigCreate(const char* filename, SP_CONFIG_MSG* msg){
 	FILE * fp = NULL;
 	int line_cnt = 1, i = 0,is_valid;
@@ -73,7 +61,6 @@ SPConfig spConfigCreate(const char* filename, SP_CONFIG_MSG* msg){
 	SP_CONFIG_MSG update_msg;
 	bool has_equal = false, has_space_equal=false;
 
-	//printf("entered spConfigCreate\n");
 
 	// validate inputs
 	assert (msg != NULL);
@@ -120,7 +107,7 @@ SPConfig spConfigCreate(const char* filename, SP_CONFIG_MSG* msg){
 	config->spLoggerFilename = (char *)malloc(sizeof(char)*MAX_LINE_LEN);
 
 	if (config->spLoggerFilename == NULL){
-		*msg = SP_CONFIG_CANNOT_OPEN_FILE; //TO DO!!! CHECK IF & IS NEEDED
+		*msg = SP_CONFIG_CANNOT_OPEN_FILE;
 		free(config->spPCAFilename);
 		free(config);	// free all previous allocation
 		fclose(fp);
@@ -136,17 +123,12 @@ SPConfig spConfigCreate(const char* filename, SP_CONFIG_MSG* msg){
 	config->spImagesSuffix = NULL;
 	config->spNumOfImages = -1;
 
-	//printf("before load file\n");
-
 	//######################################################################################
+	//############################# load data from fp ######################################
 	//######################################################################################
-	//######################################################################################
-
-	// load data from fp
 
 	while (fgets(line, MAX_LINE_LEN, fp) != NULL){
-		//printf("line = %s len = %d\n", line, (int)strlen(line));
-		//fflush(NULL);
+
 		if (!IsEmptyLine(line)){
 
 			has_space_equal = is_whitespace_and_equal(line);
@@ -182,29 +164,11 @@ SPConfig spConfigCreate(const char* filename, SP_CONFIG_MSG* msg){
 					pch = strtok (NULL, "= \r\n\t\v\f");
 					i++;
 				}
-				//printf("key = %s, val = %s\n", key, value);
-				//fflush(NULL);
 
 				if (i != 0){ // indicator that this is not a empty line
 					// update value for current key
 					update_msg = update_config_param(config,key,value,i);
-					/*
-					printf("right after exiting!!!\n");
-					printf("spImagesDirectory %s\n", config->spImagesDirectory);
-					printf("spImagesPrefix %s\n", config->spImagesPrefix);
-					printf("spImagesSuffix %s\n", config->spImagesSuffix);
-					printf("spNumOfImages %d\n", config->spNumOfImages);
-					printf("spPCADimension %d\n", config->spPCADimension);
-					printf("spPCAFilename %s\n", config->spPCAFilename);
-					printf("spNumOfFeatures %d\n", config->spNumOfFeatures);
-					printf("spExtractionMode %d\n", config->spExtractionMode);
-					printf("spNumOfSimilarImages %d\n", config->spNumOfSimilarImages);
-					printf("spKDTreeSplitMethod %d\n", config->spKDTreeSplitMethod);
-					printf("spKNN %d\n", config->spKNN);
-					printf("spMinimalGUI %d\n", config->spMinimalGUI);
-					printf("spLoggerLevel %d\n", config->spLoggerLevel);
-					printf("spLoggerFilename %s\n\n\n\n", config->spLoggerFilename);
-					 */
+
 					if (update_msg == SP_CONFIG_INVALID_ARGUMENT){
 						printf("File: %s\nLine: %d\nMessage: Invalid configuration line\n",filename,line_cnt);
 						*msg = SP_CONFIG_INVALID_STRING;
@@ -264,27 +228,6 @@ SPConfig spConfigCreate(const char* filename, SP_CONFIG_MSG* msg){
 		return NULL;
 	}
 
-	// printing all fields assigned
-
-	//printf("finishied!!!\n");
-	//fflush(NULL);
-	/*
-	printf("spImagesDirectory %s\n", config->spImagesDirectory);
-	printf("spImagesPrefix %s\n", config->spImagesPrefix);
-	printf("spImagesSuffix %s\n", config->spImagesSuffix);
-	printf("spNumOfImages %d\n", config->spNumOfImages);
-	printf("spPCADimension %d\n", config->spPCADimension);
-	printf("spPCAFilename %s\n", config->spPCAFilename);
-	printf("spNumOfFeatures %d\n", config->spNumOfFeatures);
-	printf("spExtractionMode %d\n", config->spExtractionMode);
-	printf("spNumOfSimilarImages %d\n", config->spNumOfSimilarImages);
-	printf("spKDTreeSplitMethod %d\n", config->spKDTreeSplitMethod);
-	printf("spKNN %d\n", config->spKNN);
-	printf("spMinimalGUI %d\n", config->spMinimalGUI);
-	printf("spLoggerLevel %d\n", config->spLoggerLevel);
-	printf("spLoggerFilename %s\n", config->spLoggerFilename);
-	*/
-
 	*msg = SP_CONFIG_SUCCESS;
 	fclose(fp);
 	return config;
@@ -316,7 +259,6 @@ SP_CONFIG_MSG update_config_param(SPConfig config, char* key, char* value, int i
 			}
 			strncpy(config->spImagesDirectory,value,strlen(value));
 			*(config->spImagesDirectory + strlen(value)) = '\0';
-			//printf("dir in func = %s\n",config->spImagesDirectory);
 			return SP_CONFIG_SUCCESS;
 		}
 		else{ // too many whitespaces
@@ -333,7 +275,6 @@ SP_CONFIG_MSG update_config_param(SPConfig config, char* key, char* value, int i
 
 			strncpy(config->spImagesPrefix,value,strlen(value));
 			*(config->spImagesPrefix + strlen(value)) = '\0';
-			//printf("prefix in func = %s\n",config->spImagesPrefix);
 			return SP_CONFIG_SUCCESS;
 		}
 		else{ // value is invalid - too many whitespaces
@@ -355,7 +296,6 @@ SP_CONFIG_MSG update_config_param(SPConfig config, char* key, char* value, int i
 				}
 				strncpy(config->spImagesSuffix,value,strlen(value));
 				*(config->spImagesSuffix + strlen(value)) = '\0';
-				//printf("suffix in func = %s\n",config->spImagesSuffix);
 				return SP_CONFIG_SUCCESS;
 			}
 		}
@@ -394,19 +334,15 @@ SP_CONFIG_MSG update_config_param(SPConfig config, char* key, char* value, int i
 
 	else if (strcmp(key,"spPCAFilename") == 0){
 		if (valid_whitespaces){ // line is valid
-			// no need in memory allocation - was already allocated when assigned default value
-			//printf("in update - spPCAFilename param before free\n");
+			// free previous allocated memory and malloc for new string length
 			free(config->spPCAFilename);
-			//printf("in update - spPCAFilename param after free\n");
 			config->spPCAFilename = (char*)malloc(strlen(value) + 1);
-			//printf("in update - spPCAFilename param after malloc\n");
 			if (config->spPCAFilename == NULL){
 				return SP_CONFIG_ALLOC_FAIL;
 			}
 			strncpy(config->spPCAFilename,value,strlen(value));
 			*(config->spPCAFilename + strlen(value)) = '\0';
-			//printf("in update - spPCAFilename param after assign\n");
-			//printf("pca filename in func = %s\n", config->spPCAFilename);
+
 			return SP_CONFIG_SUCCESS;
 		}
 		else{ // value is invalid - too many whitespaces
@@ -547,6 +483,7 @@ SP_CONFIG_MSG update_config_param(SPConfig config, char* key, char* value, int i
 
 	else if (strcmp(key, "spLoggerFilename") == 0){
 		if (valid_whitespaces){ // line is valid
+			// free previous allocated memory and malloc for new string length
 			free(config->spLoggerFilename);
 			config->spLoggerFilename = (char*)malloc(strlen(value) + 1);
 			if (config->spLoggerFilename == NULL){
@@ -643,8 +580,6 @@ int spConfigGetPCADim(const SPConfig config, SP_CONFIG_MSG* msg){
 SP_CONFIG_MSG spConfigGetImagePath(char* imagePath, const SPConfig config, int index){
 	char curr_img[MAX_LINE_LEN];
 
-	//printf("before all\n");
-	fflush(NULL);
 	// check input validity
 	if (imagePath == NULL || config == NULL){
 		return SP_CONFIG_INVALID_ARGUMENT;
@@ -656,25 +591,13 @@ SP_CONFIG_MSG spConfigGetImagePath(char* imagePath, const SPConfig config, int i
 
 	// concatenate fields into one path and store it in imagePath (will be malloced before call)
 	memset(imagePath, 0x00, MAX_LINE_LEN); // clean memory on stack
-	//printf("before dir %s\n",imagePath);
-	fflush(NULL);
 	strncpy(imagePath, config->spImagesDirectory, strlen(config->spImagesDirectory));
-	//printf("after dir %s\n",imagePath);
-	fflush(NULL);
 	strncat(imagePath, config->spImagesPrefix, strlen(config->spImagesPrefix));
-	//printf("after pref %s\n",imagePath);
-	fflush(NULL);
 	sprintf(curr_img, "%d", index);
-	//printf("after sprintf curr_img = %s\n",curr_img);
 	strncat(imagePath, curr_img, strlen(curr_img));	// check if need to change to strlen() -1
-	//printf("after idx %s\n",imagePath);
-	fflush(NULL);
 	strncat(imagePath, config->spImagesSuffix, strlen(config->spImagesSuffix));
-	//printf("after suffix %s\n",imagePath);
-	fflush(NULL);
 	imagePath[strlen(imagePath)] = '\0'; // to keep imagePath a valid string
-	//printf("final %s\n",imagePath);
-	fflush(NULL);
+
 
 	return SP_CONFIG_SUCCESS;
 }

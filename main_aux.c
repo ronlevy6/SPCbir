@@ -405,10 +405,6 @@ PMatrix* split(PMatrix pmatrix, int coor, SP_AUX_MSG* msg){
 	n = pmatrix->cols;
 	mid = (int)(0.5 +(n / 2.0)); // ceil n\2 up using 2.0 to avoid cast into int
 
-	// allocate memory for left
-	//printf("in SPLIT before allocate left\n");
-	//fflush(NULL);
-
 	// get the kd array sorted according coor
 	idx_sorted_by_coor = pmatrix->matrix[coor];
 	sorted_coor_arr = create_array_by_coor(pmatrix->kd_array, idx_sorted_by_coor);
@@ -418,6 +414,7 @@ PMatrix* split(PMatrix pmatrix, int coor, SP_AUX_MSG* msg){
 		return NULL;
 	}
 
+	// allocate memory for left
 	left = allocate_mem_matrix(pmatrix->rows, msg);
 	if (left == NULL){
 		spLoggerPrintError(ALLOC_MATRIX_ERROR,__FILE__,__func__,__LINE__);
@@ -440,34 +437,13 @@ PMatrix* split(PMatrix pmatrix, int coor, SP_AUX_MSG* msg){
 		return NULL;
 	}
 
-/*
-	for(int i = 0; i < left->kd_array->size; i++){
-		printf(" BEFORE QSORT: i = %d, left[i] = %f, %f, kdarray index = %d\n",i, spPointGetAxisCoor(left->kd_array->data[i].point,0),
-				spPointGetAxisCoor(left->kd_array->data[i].point,1), left->kd_array->data[i].index);
-		fflush(NULL);
-	}
-*/
-
-
 	// sort by index after extracting
 	qsort(left->kd_array->data, left->cols, sizeof(KDElement), compare_idx);
-/*
-	// print the idx to see that its fixed
-	for(int i = 0; i < left->kd_array->size; i++){
-		printf(" AFTER QSORT: i = %d, left[i] = %f, %f, kdarray index = %d\n",i, spPointGetAxisCoor(left->kd_array->data[i].point,0),
-				spPointGetAxisCoor(left->kd_array->data[i].point,1), left->kd_array->data[i].index);
-		fflush(NULL);
-	}
-*/
-
-
 
 	for (int i = 0; i < mid; i++){	// regenerate indices to the new kd array according to split
 		left->kd_array->data[i].index = i;
 	}
 
-	//printf("in SPLIT after allocate left before right\n");
-	//fflush(NULL);
 	//allocate memory for right
 	right = allocate_mem_matrix(pmatrix->rows, msg);
 	if (right == NULL){
@@ -492,28 +468,14 @@ PMatrix* split(PMatrix pmatrix, int coor, SP_AUX_MSG* msg){
 		FREE_AND_NULL(right);
 		return NULL;
 	}
-/*
-	for(int i = 0; i < right->kd_array->size; i++){
-		printf(" BEFORE QSORT: i = %d, right[i] = %f, %f, kdarray index = %d\n",i, spPointGetAxisCoor(right->kd_array->data[i].point,0),
-				spPointGetAxisCoor(right->kd_array->data[i].point,1), right->kd_array->data[i].index);
-		fflush(NULL);
-	}
-*/
+
 	// sort the array according to index
 	qsort(right->kd_array->data, right->cols, sizeof(KDElement), compare_idx);
-/*
-	for(int i = 0; i < right->kd_array->size; i++){
-		printf(" AFTER QSORT: i = %d, right[i] = %f, %f, kdarray index = %d\n",i, spPointGetAxisCoor(right->kd_array->data[i].point,0),
-				spPointGetAxisCoor(right->kd_array->data[i].point,1), right->kd_array->data[i].index);
-		fflush(NULL);
-	}
-*/
+
 	for (int i = 0; i < n-mid; i++){	// regenerate indices to the new kd array according to split
 		right->kd_array->data[i].index = i;
 	}
 
-	//printf("in SPLIT after right allocations before split map\n");
-	//fflush(NULL);
 	// create array of 0\1: 0 for left and 1 for right
 	split_map = createSplitMap(pmatrix, coor, mid, msg);
 
@@ -525,8 +487,7 @@ PMatrix* split(PMatrix pmatrix, int coor, SP_AUX_MSG* msg){
 		DestroyMatrix(right, 0);
 		return NULL;
 	}
-	//printf("in SPLIT after split map creation before l_map creation\n");
-	//fflush(NULL);
+
 	// use l_map and r_map to split the matrix into two parts
 	l_map = createNewIdx(pmatrix, split_map, 0, msg);
 
@@ -552,8 +513,6 @@ PMatrix* split(PMatrix pmatrix, int coor, SP_AUX_MSG* msg){
 		return NULL;
 	}
 
-	//printf("in SPLIT after r_map before new idx update\n");
-	//fflush(NULL);
 	// update left and right matrices values - new indices
 	for(int i = 0; i < pmatrix->rows; i++){
 
@@ -599,8 +558,7 @@ PMatrix* split(PMatrix pmatrix, int coor, SP_AUX_MSG* msg){
 			}
 		}
 	}
-	//printf("in SPLIT after big i loop\n");
-	//fflush(NULL);
+
 	// create the array that will contain the results - left in index 0 and right in index 1
 	result = (PMatrix*)malloc(sizeof(*result) * 2);// added dereferencing, should be like that?
 	if (result == NULL){
@@ -614,8 +572,7 @@ PMatrix* split(PMatrix pmatrix, int coor, SP_AUX_MSG* msg){
 		FREE_AND_NULL(split_map);
 		return NULL;
 	}
-	//printf("in SPLITbefore final assignment to result\n");
-	//fflush(NULL);
+
 	// assign values to result
 	result[0] = left;
 	result[1] = right;
@@ -625,125 +582,14 @@ PMatrix* split(PMatrix pmatrix, int coor, SP_AUX_MSG* msg){
 	FREE_AND_NULL(l_map);
 	FREE_AND_NULL(r_map);
 	FREE_AND_NULL(split_map);
-/*
-	// this is a print for debuggggs
-	printf("in SPLIT kd array right size = %d\n",right->kd_array->size);
-	fflush(NULL);
-	for(int i = 0; i < right->kd_array->size; i++){
-		printf("i = %d, right[i] = %f, %f\n",i, spPointGetAxisCoor(right->kd_array->data[i].point,0),
-				spPointGetAxisCoor(right->kd_array->data[i].point,1));
-		fflush(NULL);
-	}
-	printf("in SPLIT kd array left size = %d\n",left->kd_array->size);
-	fflush(NULL);
 
-	for (int i = 0; i < left->kd_array->size; i++){
-		printf("in SPLIT i = %d, kd array coor at 0 = %f coor at 1 = %f\n",i,spPointGetAxisCoor(left->kd_array->data[i].point,0),
-				spPointGetAxisCoor(left->kd_array->data[i].point,1));
-		fflush(NULL);
-	}
-*/
 	*msg = SP_AUX_SUCCESS;
-	//printf("in SPLIT FINISHED\n");
-	//fflush(NULL);
 	return result;
 }
 
 
 //######################### PRE PROCCESS - write is in main.cpp ###########################//
-/*
-void writeFeaturesToFile(SPConfig config){
-	int num_of_images, num_of_features, pca_dim;
-	char *image_path,*feats_path;
-	SP_CONFIG_MSG msg = SP_CONFIG_SUCCESS;
-	FILE * fp;
-	SPPoint* res_point;
-	SPPoint point;
 
-	if (config == NULL){
-		spLoggerPrintError(INVALID_ARG_ERROR,__FILE__,__func__,__LINE__);
-		return;
-	}
-
-	// get needed values from config
-	num_of_images = spConfigGetNumOfImages(config,&msg);
-	if (msg != SP_CONFIG_SUCCESS) {
-		spLoggerPrintError(NUM_OF_IMAGES_ERROR, __FILE__, __func__, __LINE__);
-		return;
-	}
-
-	num_of_features = spConfigGetNumOfFeatures(config,&msg);
-	if (msg != SP_CONFIG_SUCCESS){
-		spLoggerPrintError(NUM_OF_FEATS_ERROR,__FILE__,__func__,__LINE__);
-		return;
-	}
-
-	pca_dim = spConfigGetPCADim(config, &msg);
-	if (msg != SP_CONFIG_SUCCESS){
-		spLoggerPrintError(PCA_DIM_ERROR_MSG,__FILE__,__func__,__LINE__);
-		return;
-	}
-
-
-	for (int i = 0; i < num_of_images; i++){
-
-		// get image path to be used in the extraction of features
-		image_path = (char*)malloc(MAX_LINE_LEN);
-		if (image_path == NULL){
-			spLoggerPrintError(ALLOC_ERROR_MSG,__FILE__,__func__,__LINE__);
-			return;
-		}
-		msg = spConfigGetImagePath(image_path,config,i);
-		if (msg != SP_CONFIG_SUCCESS){
-			spLoggerPrintError(IMAGE_PATH_ERROR,__FILE__,__func__,__LINE__);
-			return;
-		}
-
-		// create the .feats file path for the i'th image by overriding the last 3
-		// string characters and replacing them in .feat suffix
-		feats_path = (char*)malloc(MAX_LINE_LEN);
-		if (feats_path == NULL){
-			spLoggerPrintError(ALLOC_ERROR_MSG,__FILE__,__func__,__LINE__);
-			return;
-		}
-		msg = spConfigGetFeatsPath(feats_path, config, i);
-		if (msg != SP_CONFIG_SUCCESS){
-			spLoggerPrintError(FEAT_PATH_ERROR,__FILE__,__func__,__LINE__);
-			return;
-		}
-
-		fp = fopen(feats_path, "w");
-		if (fp == NULL){
-			spLoggerPrintError(CAN_NOT_OPEN_FILE,__FILE__,__func__,__LINE__);
-			return;
-		}
-		// feat_path is OK to write to
-		sp::ImageProc improc = sp::ImageProc((const SPConfig) config);
-		res_point = improc.getImageFeatures((const char*)image_path, i, &num_of_features);
-		// write the first line as presented in the file's format
-		fprintf(fp, "%d %d %d\n", num_of_features, pca_dim,i); // check if \n is necessary
-
-		// write each point data into a different line in fp
-		for (int j = 0; j < num_of_features; j++){
-			point = res_point[j];
-			for (int k = 0; k < pca_dim; k++){
-				fprintf(fp, "%f ", spPointGetAxisCoor(point, k));
-			}
-			// done entering point's data - feature j
-			fprintf(fp, "%s", "\n");
-		}// end of j loop
-		fclose(fp);
-		free(feats_path);
-		free(image_path);
-		//free res point array
-		for(int q = 0; q < num_of_features; q++){
-			spPointDestroy(res_point[q]);
-		}
-		free(res_point);
-
-	}// end of i loop
-}
-*/
 SPPoint* readFeaturesFromFile(SPConfig config, int* size){
 
 	int num_of_images,ffeatures,findex,fpcadim,
@@ -756,24 +602,18 @@ SPPoint* readFeaturesFromFile(SPConfig config, int* size){
 	SPPoint point;
 	double* curr_data;
 
-	//printf("entered readFeaturesFromFile\n");
-	//fflush(NULL);
-
 	if (config == NULL){
 		spLoggerPrintError(INVALID_ARG_ERROR,__FILE__,__func__,__LINE__);
 		return NULL;
 	}
 	// array size is the number of all features in all the
 	//images in the directory referenced by config.
-	//printf("before getTotalNumOfFeatures\n");
-	//fflush(NULL);
 	arr_size = getTotalNumOfFeatures(config);
 	if (arr_size == -1){ // failed to extract total number of features
 		spLoggerPrintError(GENERAL_ERROR_MSG,__FILE__,__func__,__LINE__);
 		return NULL;
 	}
-	//printf("before malloc of res_point\n");
-	//fflush(NULL);
+
 	res_point = (SPPoint*)malloc(sizeof(point) * arr_size);
 	if (res_point == NULL){
 		spLoggerPrintError(ALLOC_ERROR_MSG,__FILE__,__func__,__LINE__);
@@ -781,8 +621,6 @@ SPPoint* readFeaturesFromFile(SPConfig config, int* size){
 	}
 	// get needed values from config
 
-	//printf("Before Num of Images\n");
-	//fflush(NULL);
 	num_of_images = spConfigGetNumOfImages(config, &msg);
 	if (msg != SP_CONFIG_SUCCESS) {
 		spLoggerPrintError(NUM_OF_IMAGES_ERROR, __FILE__, __func__, __LINE__);
@@ -790,8 +628,6 @@ SPPoint* readFeaturesFromFile(SPConfig config, int* size){
 		return NULL;
 	}
 
-	//printf("Before i loop\n");
-	//fflush(NULL);
 	for (int i = 0; i < num_of_images; i++){
 		// create the .feats file path for the i'th image by overriding the last 3
 		// string characters and replacing them in .feat suffix
@@ -801,8 +637,7 @@ SPPoint* readFeaturesFromFile(SPConfig config, int* size){
 			free_point_arr(res_point, point_arr_cnt);
 			return NULL;
 		}
-		//printf("Before spConfigGetFeatsPath\n");
-		//fflush(NULL);
+
 		msg = spConfigGetFeatsPath(feats_path, config, i);
 		if (msg != SP_CONFIG_SUCCESS){
 			spLoggerPrintError(FEAT_PATH_ERROR,__FILE__,__func__,__LINE__);
@@ -819,7 +654,7 @@ SPPoint* readFeaturesFromFile(SPConfig config, int* size){
 			return NULL;
 		}
 
-		fscanf(fp, "%d %d %d", &ffeatures, &fpcadim, &findex);// TO DO  check if there is a need in \n
+		fscanf(fp, "%d %d %d", &ffeatures, &fpcadim, &findex);
 
 		// after reading first line - process features
 		for (int j = 0; j < ffeatures; j++){
@@ -835,7 +670,7 @@ SPPoint* readFeaturesFromFile(SPConfig config, int* size){
 			}
 
 			for (int k = 0; k <fpcadim; k++){
-				fscanf(fp,"%lf", &read_val);// lf works fine? or should it be just f?
+				fscanf(fp,"%lf", &read_val);//
 				curr_data[k] = read_val;
 			}
 			point = spPointCreate(curr_data, fpcadim, findex);
@@ -857,8 +692,7 @@ SPPoint* readFeaturesFromFile(SPConfig config, int* size){
 		free(feats_path);
 		fclose(fp);
 	} // end of i loop
-	//printf("After i loop, before return\n");
-	//fflush(NULL);
+
 	*size = arr_size; // update array size
 	return res_point;
 }
@@ -871,24 +705,17 @@ int getTotalNumOfFeatures(SPConfig config){
 	SP_CONFIG_MSG msg;
 
 
-	//printf("entered getTotalNumOfFeatures\n");
-	//fflush(NULL);
-
 	if (config == NULL){
 		spLoggerPrintError(INVALID_ARG_ERROR,__FILE__,__func__,__LINE__);
 		return -1;
 	}
 
-	//printf("getTotalNumOfFeatures - before get num of images\n");
-	//fflush(NULL);
 	num_of_images = spConfigGetNumOfImages(config,&msg);
 	if (msg != SP_CONFIG_SUCCESS) {
 		spLoggerPrintError(NUM_OF_IMAGES_ERROR, __FILE__, __func__, __LINE__);
 		return -1;
 	}
 
-	//printf("getTotalNumOfFeatures - before i loop\n");
-	//fflush(NULL);
 	// for each image read the first line from the .feats file and extract number of features
 	for (int i = 0; i < num_of_images; i ++){
 		feats_path = (char*)malloc(MAX_LINE_LEN);
@@ -896,12 +723,8 @@ int getTotalNumOfFeatures(SPConfig config){
 			spLoggerPrintError(ALLOC_ERROR_MSG,__FILE__,__func__,__LINE__);
 			return -1;
 		}
-		//printf("getTotalNumOfFeatures - before get feats path\n");
-		//fflush(NULL);
-		msg = spConfigGetFeatsPath(feats_path, config, i);
 
-		//printf("feats_path = %s\n",feats_path);
-		//fflush(NULL);
+		msg = spConfigGetFeatsPath(feats_path, config, i);
 
 		if (msg != SP_CONFIG_SUCCESS){
 			spLoggerPrintError(FEAT_PATH_ERROR,__FILE__,__func__,__LINE__);
@@ -909,8 +732,6 @@ int getTotalNumOfFeatures(SPConfig config){
 			return -1;
 		}
 
-		//printf("getTotalNumOfFeatures - before open file\n");
-		//fflush(NULL);
 		fp = fopen(feats_path, "r");
 		if (fp == NULL){
 			spLoggerPrintError(CAN_NOT_OPEN_FILE,__FILE__,__func__,__LINE__);
@@ -918,18 +739,11 @@ int getTotalNumOfFeatures(SPConfig config){
 			return -1;
 		}
 
-		//printf("getTotalNumOfFeatures - before assigns\n");
-		//fflush(NULL);
-
 		fscanf(fp, "%d", &ffeatures);
 		all_feats += ffeatures;
 		fclose(fp);
 		free(feats_path);
-		//printf("getTotalNumOfFeatures - finished iteration\n");
-		//fflush(NULL);
 	}
-	//printf("getTotalNumOfFeatures - after i loop\n");
-	//fflush(NULL);
 
 	return all_feats;
 }
@@ -1002,7 +816,6 @@ double get_median_value(PMatrix pmatrix, int split_dim){
 	if (n % 2 != 0){ // n is odd
 		mid = mid -1;	// array index starts with zero
 	}
-	//printf("in get_median_value, split dim = %d, mid = %d, n = %d\n", split_dim, mid, n);
 
 	median_idx = pmatrix->matrix[split_dim][mid];
 	median_value = spPointGetAxisCoor(pmatrix->kd_array->data[median_idx].point, split_dim);
@@ -1092,8 +905,6 @@ PKDTreeNode create_tree(PMatrix pmatrix, SP_KDTREE_SPLIT_METHOD split_method, in
 		return NULL;
 	}
 
-	//printf("val = %f, median = %f split dim = %d\n", node->val, median, split_dim);
-
 	// split the kd array according to split dim
 	split_result = split(pmatrix, split_dim,&msg);
 	if (msg != SP_AUX_SUCCESS){
@@ -1159,7 +970,7 @@ void knn(PKDTreeNode node,SPBPQueue queue, SPPoint point){
 		spListElementDestroy(elem); // destroy elem since it is copied to queue
 		return;
 	}
-	/* Recursively search the half of the tree that contains the test point. */
+	//Recursively search the half of the tree that contains the test point.
 	node_dim = node->dim;
 	if (spPointGetAxisCoor(point,node_dim) <= node->val){
 		// search the left subtree
